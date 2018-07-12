@@ -77,11 +77,23 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate {
     
     
     //Write the didUpdateLocations method here:
-    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        let location = locations[locations.count - 1]
+        if location.horizontalAccuracy > 0 {
+            locationManager.stopUpdatingLocation()
+            print("Long = \(location.coordinate.longitude)  , lati = \(location.coordinate.latitude) ")
+            let lat = String(location.coordinate.latitude)
+            let lon = String(location.coordinate.longitude)
+            let params : [String : String] = ["lat" : lat, "lon" : lon, "appid" : APP_ID]
+        }
+    }
     
     
     //Write the didFailWithError method here:
-    
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print(error)
+        cityLabel.text = "Location Unavailable"
+    }
     
     
 
