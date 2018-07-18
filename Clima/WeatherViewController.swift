@@ -10,6 +10,8 @@ import UIKit
 import CoreLocation
 import Alamofire
 import SwiftyJSON
+import CryptoSwift
+
 
 class WeatherViewController: UIViewController, CLLocationManagerDelegate, ChangeCityDelegate {
     
@@ -61,11 +63,50 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate, Change
             }
             
         }
-        
-        
-        
     }
 
+    //Write the getCryptoData method here: url: String, parameters:[String: String]
+    func getCryptoData(url: String, parameters:[String: String]){
+        //https://bittrex.com/api/v1.1/account/getbalances?apikey=c1e72e29f8d64ba0a61a383f3794b612
+        //apikey=c1e72e29f8d64ba0a61a383f3794b612
+        //apisecret=94b4e2e2eb7b41548e6003b0e6730e35
+        
+        let apisecret: String = "94b4e2e2eb7b41548e6003b0e6730e35"
+        let salturl: String = "https://bittrex.com/api/v1.1/account/getbalances?apikey=\(parameters["apikey"] ?? "test")&nonce=\(parameters["nonce"]  ?? "test")"
+        print("url : \(salturl)")
+        let password: Array<UInt8> = Array(apisecret.utf8)
+        let salt: Array<UInt8> = Array(salturl.utf8)
+
+        do  {
+            let key = try HMAC(key: password, variant: .sha512).authenticate(salt)
+            print("before hash : \(key)")
+            let result  = NSData(bytes:key, length:key.count).description
+            print("hash : \(result)")
+            let newString = result.replacingOccurrences(of: " ", with: "", options: .literal, range: nil)
+            let newString2 = newString.replacingOccurrences(of: "<", with: "", options: .literal, range: nil)
+            let newString3 = newString2.replacingOccurrences(of: ">", with: "", options: .literal, range: nil)
+            print("hash string : \(newString3)")
+            print("para : \(parameters)")
+            let header = ["apisign": newString3]
+            Alamofire.request(url , method: .get, parameters: parameters, headers: header ).responseJSON{
+                response in
+                if response.result.isSuccess {
+                    print("Crypto Success!")
+                    let weatherJson : JSON = JSON(response.result.value!)
+                    print(weatherJson)
+                    //self.updateWeatherData(json : weatherJson)
+                } else {
+                    print("Error \(response.result.error)")
+                    self.cityLabel.text = "Connection Issues"
+                }
+                
+            }
+        } catch {
+            print(error)
+        }
+
+    }
+    
     
     
     
@@ -126,6 +167,12 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate, Change
             let lon = String(location.coordinate.longitude)
             let params : [String : String] = ["lat" : lat, "lon" : lon, "appid" : APP_ID]
             getWeatherData(url: WEATHER_URL, parameters: params)
+            
+            let url: String = "https://bittrex.com/api/v1.1/account/getbalances"
+            let params1 : [String : String] = ["apikey" : "c1e72e29f8d64ba0a61a383f3794b612", "nonce" : String(NSDate().timeIntervalSince1970)]
+            //let url: String = "https://bittrex.com/api/v1.1/account/getbalances?apikey=c1e72e29f8d64ba0a61a383f3794b612&nonce=\(String(NSDate().timeIntervalSince1970))"
+            //let params1 : [String : String] = ["":""]
+            getCryptoData(url: url, parameters: params1)
         }
     }
     
@@ -144,8 +191,10 @@ class WeatherViewController: UIViewController, CLLocationManagerDelegate, Change
 
     
     //Write the userEnteredANewCityName Delegate method here:
-    func ennteredCityName(city : String){
+    func enteredCityName(city : String){
         print(city)
+        let params : [String : String] = ["q" : city, "appid" : APP_ID]
+        getWeatherData(url: WEATHER_URL, parameters: params)
     }
     
     //Write the PrepareForSegue Method here
